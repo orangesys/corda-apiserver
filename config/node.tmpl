@@ -1,0 +1,43 @@
+myLegalName : "{{.MyLegalName}}"
+p2pAddress : "{{.P2PAddress}}"
+
+networkServices {
+    doormanURL : "https://nms-test.cordite.foundation"
+    networkMapURL : "https://nms-test.cordite.foundation"
+}
+
+dataSourceProperties {
+    dataSourceClassName="org.h2.jdbcx.JdbcDataSource"
+    dataSource {
+        url="jdbc:h2:file:/opt/corda/persistence;DB_CLOSE_ON_EXIT=FALSE;LOCK_TIMEOUT=10000;WRITE_DELAY=100;AUTO_SERVER_PORT=9090"
+        user="sa"
+        password="dbpass"
+    }
+    maximumPoolSize="10"
+}
+
+sshd {
+    port = 2222
+}
+
+keyStorePassword : "cordacadevpass"
+trustStorePassword : "trustpass"
+detectPublicIp : false
+devMode : false
+custom {
+    jvmArgs=[
+        "-Dbraid.Cordite-example.port=8080",
+        "-Xms512m", "-Xmx1536m", 
+        "-Dlog4j.configurationFile=cordite-log4j2.xml",
+        "-Dlog4j2.debug"
+    ]
+}
+rpcSettings {
+    address="0.0.0.0:10201"
+    adminAddress="0.0.0.0:10202"
+}
+jarDirs=[
+    "/opt/corda/libs"
+]
+emailAddress : "noreply@cordite.foundation"
+cordappSignerKeyFingerprintBlacklist = []

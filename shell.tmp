@@ -1,0 +1,39 @@
+java -jar ./corda.jar \
+        --initial-registration \
+        --config-file ./node.conf \
+        --network-root-truststore-password=trustpass \
+        --network-root-truststore=./truststore.jks \
+        --skip-schema-creation \
+        --log-to-console \
+        --base-directory ./tmp/partya
+
+
+docker run  -it -d \
+            --name cenm \
+            -e NMS_CERTMAN_TRUSTSTORE_PASSWORD="123" \
+            -e NMS_ROOT_CA_FILE_PATH="" \
+            -p 8090:8080 cordite/network-map:latest 
+
+
+docker run -it \
+        --name cordite-node \
+        --memory=2048m \
+        --cpus=2 \
+        -e MY_LEGAL_NAME="O=Cordite-example,L=Berlin,C=DE" \
+        -e MY_PUBLIC_ADDRESS="cordite.example.com" \
+        -e MY_EMAIL_ADDRESS="noreply@cordite.foundation" \
+        -e NETWORK_MAP_URL="http://192.168.99.111" \
+        -e CORDITE_NMS="true" \
+        -v $(pwd):/opt/corda/certificates \
+        -v $(pwd):/opt/corda/persistence \
+        -p 10200:10200 \
+        -p 8080:8080 \
+        cordite/cordite:latest
+
+docker run --rm -d --name cordite-ui \
+  -p 3000:80 \
+  -e CORDITE_UI_NODE_API=http://192.168.99.111:8080/api/ \
+  -e CORDITE_UI_DEFAULT_NOTARY_NAME="OU=Cordite Foundation, O=Notary, L=London, C=GB" \
+  cordite/cordite-ui:latest
+
+
