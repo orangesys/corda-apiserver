@@ -7,10 +7,15 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o app ./cmd/server/main.g
 
 FROM adoptopenjdk/openjdk8
 
-COPY ./corda.jar /opt/corda/bin/corda.jar
-COPY ./initial-registration.sh /bin/initial-registration
-COPY ./validate-configuration.sh /bin/validate-configuration
-COPY ./truststore.jks /opt/corda/truststore.jks
+RUN curl -LJO https://dl.bintray.com/r3/corda/net/corda/corda/4.6/corda-4.6.jar \
+    && mkdir -p /opt/corda/bin \
+    && mv corda-4.6.jar /opt/corda/bin/corda.jar
+
+COPY ./scripts .
+RUN mv initial-registration.sh /bin/initial-registration \
+    && mv validate-configuration.sh /bin/validate-configuration \
+    && mv truststore.jks /opt/corda/truststore.jks
+
 COPY ./config /config
 COPY --from=builder /src/go/app .
 
