@@ -2,6 +2,8 @@ package corda
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -12,7 +14,7 @@ import (
 	"orangesys.io/corda-apiserver/internal/pkg/filesystem"
 )
 
-var baseDir = "/Users/xucheng/go/src/corda-apiserver"
+var baseDir = "/go/src/corda-apiservice"
 
 //Service ...
 type Service interface {
@@ -49,38 +51,20 @@ func (s *service) GetCerts(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-	_, _, err := genNodeConf(&req)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	tmpDir := baseDir + "/tmp/" + req.UniqueName()
-
-	if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-
-	go func() {
-		cmd := exec.Command(
-			"/bin/bash",
-			"-c",
-			"/Users/xucheng/go/src/corda-apiserver/initial-registration.sh "+baseDir,
-		)
-		_, err := cmd.CombinedOutput()
-		if err != nil {
-			log.Fatalf("cmd.Run() failed with %s\n", err)
+	filePath := NewNode(&req).GetHomeDir() + "/certificates.zip"
+	if !filesystem.Exist(filePath) {
+		if err := genCerts(&req); err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
 		}
-		os.Rename("./aa/bb/c1/file.go", "./aa/bb/c2/file.go")
 
-	}()
-
-	c.String(http.StatusOK, "test")
+	}
+	c.File(filePath)
+	return
 }
 
 func genNodeConf(nodeConf *NodeConf) (content []byte, filepath string, err error) {
-	t, err := template.ParseFiles(baseDir + "/config/node.tmpl")
+	t, err := template.ParseFiles(os.Getenv("CONFIG_PATH") + "/node.tmpl")
 	if err != nil {
 		return nil, "", err
 	}
@@ -89,9 +73,57 @@ func genNodeConf(nodeConf *NodeConf) (content []byte, filepath string, err error
 		return nil, "", err
 	}
 	//write to file
-	path := baseDir + "/data/" + nodeConf.UniqueName() + "/node.conf"
+	path := NewNode(nodeConf).GetHomeDir() + "/node.conf"
 	if err := filesystem.WriteToFile(path, buf.Bytes()); err != nil {
 		return nil, "", err
 	}
+	//validate
+	tmpDir := NewNode(nodeConf).GetTmpDir()
+	if err := filesystem.CreateDir(tmpDir); err != nil {
+		return nil, "", err
+	}
+	cmd := exec.Command(
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf("validate-configuration %s %s", path, tmpDir),
+	)
+	out, err := cmd.CombinedOutput()
+	log.Printf("%s", out)
+	if err != nil {
+		return nil, "", errors.New("Validate configuration failed")
+	}
+
 	return buf.Bytes(), path, nil
+}
+
+func genCerts(nodeConf *NodeConf) error {
+	_, path, err := genNodeConf(nodeConf)
+	if err != nil {
+		return err
+	}
+	node := NewNode(nodeConf)
+	if err := filesystem.CreateDir(node.GetTmpDir()); err != nil {
+		return err
+	}
+
+	//generate certs
+	cmd := exec.Command(
+		"/bin/bash",
+		"-c",
+		fmt.Sprintf("initial-registration %s %s %s", path, "trustpass", node.GetTmpDir()),
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		log.Printf("%s", out)
+		return err
+	}
+
+	//compressed files
+	if err := filesystem.Zip(node.GetHomeDir()+"/certificates.zip", node.GetTmpDir()+"/certificates"); err != nil {
+		return err
+	}
+
+	//clear tmp dir
+	go os.RemoveAll(node.GetTmpDir())
+
+	return nil
 }
