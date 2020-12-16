@@ -1,11 +1,14 @@
 PROJECT="corda-apiservice"
-IMG="corda-apiservice:latest"
+IMG="dockerxucheng/corda-apiservice:latest"
 
 default:
 	echo ${PROJECT}
 
 docker-build:
 	docker build . -t ${IMG}
+
+docker-push:
+	docker push ${IMG}
 
 run: 
 	docker run -it --rm \
@@ -15,3 +18,9 @@ run:
 
 ssh:
 	docker exec -it ${PROJECT} bash
+
+deploy: 
+	kubectl apply -f ./deployment/k8s/
+
+delete:
+	kubectl delete -f ./deployment/k8s/

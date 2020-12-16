@@ -35,14 +35,13 @@ func (s *service) GetNodeConf(c *gin.Context) {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-
-	bytes, _, err := genNodeConf(&req)
+	_, path, err := genNodeConf(&req)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
-
-	c.String(http.StatusOK, string(bytes))
+	c.File(path)
+	return
 }
 
 func (s *service) GetCerts(c *gin.Context) {

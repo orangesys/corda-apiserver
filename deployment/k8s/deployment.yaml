@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: corda-apiservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: corda-apiservice
+  template:
+    metadata:
+      labels:
+        app: corda-apiservice
+    spec:
+      containers:
+      - name: corda-apiservice
+        image: dockerxucheng/corda-apiservice:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
