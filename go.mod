@@ -1,4 +1,4 @@
-module orangesys.io/corda-apiserver
+module github.com/orangesys/corda-apiserver
 
 go 1.15
 
